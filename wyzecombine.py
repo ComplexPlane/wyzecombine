@@ -98,7 +98,7 @@ def combine(record_dir: Path, output_dir: Path) -> None:
 
 def main():
     parser = argparse.ArgumentParser(
-        "wyzechunk",
+        "wyzecombine",
         description="Combine 1min video fragments recorded by Wyze V3 cameras into full videos",
     )
     parser.add_argument(
