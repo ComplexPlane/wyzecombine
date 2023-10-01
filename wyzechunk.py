@@ -22,18 +22,23 @@ def render_group(recordings: list[Recording], output_dir: Path):
         for t in [recordings[0].timestamp, recordings[-1].timestamp]
     )
     output_name = f"{start_name}_to_{end_name}.mkv"
+    tmp_output_name = f"{start_name}_to_{end_name}.tmp.mkv"
     output_path = (output_dir / output_name).resolve()
+    tmp_output_path = (output_dir / tmp_output_name).resolve()
+
+    if output_path.exists():
+        return
 
     # Could not figure out how to get ffmpeg to take the list of files via stdin so this will do
+    input = "\n".join(f"file '{r.path.resolve()}'" for r in recordings)
     with tempfile.NamedTemporaryFile() as input_tmpfile:
-        input = "\n".join(f"file '{r.path.resolve()}'" for r in recordings)
         input_tmpfile.write(input.encode())
         input_tmpfile.flush()
         subprocess.run(
             [
                 "ffmpeg",
                 "-f",
-                "concat",  # Lossless concatenation
+                "concat",
                 "-safe",
                 "0",
                 "-i",
@@ -41,10 +46,12 @@ def render_group(recordings: list[Recording], output_dir: Path):
                 "-c",
                 "copy",  # Use existing video/audio codec
                 "-y",  # Overwrite files without asking
-                str(output_path),
+                str(tmp_output_path),
             ],
             check=True,
         )
+
+    shutil.move(tmp_output_path, output_path)
 
 
 def combine(record_dir: Path, output_dir: Path) -> None:
