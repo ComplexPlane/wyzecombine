@@ -17,30 +17,33 @@ class Recording:
 
 
 def render_group(recordings: list[Recording], output_dir: Path):
-    output_name = recordings[0].timestamp.strftime("%Y%m%d_%H%M.mkv")
+    start_name, end_name = (
+        t.strftime("%Y%m%d_%H%M")
+        for t in [recordings[0].timestamp, recordings[-1].timestamp]
+    )
+    output_name = f"{start_name}_to_{end_name}.mkv"
     output_path = (output_dir / output_name).resolve()
 
-    input = "\n".join(f"file '{r.path.resolve()}'" for r in recordings)
     # Could not figure out how to get ffmpeg to take the list of files via stdin so this will do
-    with tempfile.NamedTemporaryFile("w") as f:
-        f.write(input)
-        f.flush()
+    with tempfile.NamedTemporaryFile() as input_tmpfile:
+        input = "\n".join(f"file '{r.path.resolve()}'" for r in recordings)
+        input_tmpfile.write(input.encode())
+        input_tmpfile.flush()
         subprocess.run(
             [
                 "ffmpeg",
                 "-f",
-                "concat", # Lossless concatenation
+                "concat",  # Lossless concatenation
                 "-safe",
                 "0",
                 "-i",
-                f.name,
+                input_tmpfile.name,
                 "-c",
-                "copy", # Use existing video/audio codec
-                "-y", # Overwrite files without asking
+                "copy",  # Use existing video/audio codec
+                "-y",  # Overwrite files without asking
                 str(output_path),
             ],
             check=True,
-            input=input.encode(),
         )
 
 
@@ -73,11 +76,10 @@ def combine(record_dir: Path, output_dir: Path) -> None:
     if len(recordings) == 0:
         return
     grouped_recordings: list[Recording] = [recordings[0]]
-    timedelta_threshold = datetime.timedelta(minutes=1, seconds=30)
+    TIMEDELTA_THRESHOLD = datetime.timedelta(minutes=1, seconds=30)
     for recording in recordings[1:]:
-        if (
-            recording.timestamp - grouped_recordings[-1].timestamp
-        ) < timedelta_threshold:
+        delta = recording.timestamp - grouped_recordings[-1].timestamp
+        if delta < TIMEDELTA_THRESHOLD:
             # Part of same group
             grouped_recordings.append(recording)
         else:
