@@ -59,7 +59,7 @@ def combine(record_dir: Path, output_dir: Path) -> None:
         sys.exit("ffmpeg not found")
 
     if not record_dir.exists() or not record_dir.is_dir():
-        sys.exit(f"Camera recording directory not found or invalid: {record_dir}")
+        sys.exit(f"Camera recording directory not found: {record_dir}")
     try:
         output_dir.mkdir(exist_ok=True)
     except FileExistsError:
